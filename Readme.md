@@ -142,7 +142,21 @@ After downloading, update the paths in `configs/config.yaml` to point to your lo
 
 ## Usage - Without Docker
 
-### Step 1 - Prepare Data (run once)
+### Step 1 - Download trained model weights
+
+Download the trained model weights from Google Drive:
+
+**https://drive.google.com/file/d/1ySPlVzzgmCZdO4S2xRXUmvV-meOVcCYk/view?usp=sharing**
+
+Place the downloaded file into the `saved_models/` folder:
+```
+saved_models/
+    image_caption_model_final.pth   <- put it here
+```
+
+---
+
+### Step 2 - Prepare Data (run once)
 
 ```bash
 python scripts/prepare_data.py
@@ -227,13 +241,22 @@ docker ps
 
 ---
 
-### Step 2 - Place required files
+### Step 2 - Download model weights
 
-Before building, make sure these files exist in your project folder:
+Download the trained model weights from Google Drive:
+
+**https://drive.google.com/file/d/1ySPlVzzgmCZdO4S2xRXUmvV-meOVcCYk/view?usp=sharing**
+
+After downloading, place the file here:
 ```
-saved_models/image_caption_model_final.pth   <- trained model
-data/vocab.json                               <- built by prepare_data.py
-data/dataset_stats.json                       <- built by prepare_data.py
+saved_models/
+    image_caption_model_final.pth   <- put the downloaded file here
+```
+
+Also make sure these files exist (built by prepare_data.py):
+```
+data/vocab.json
+data/dataset_stats.json
 ```
 
 ---
