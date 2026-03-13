@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  image-captioning-api:
+    build: .
+    container_name: image_captioning_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./saved_models:/app/saved_models
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

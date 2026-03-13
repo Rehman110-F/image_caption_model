@@ -1,0 +1,42 @@
+paths:
+  images_dir: "C:/Users/Zohaib/Documents/Rehman_Personal/img_val2017/val2017"
+  annotation_file: "C:/Users/Zohaib/Documents/Rehman_Personal/annot_val2017/annotations/captions_val2017.json"
+  annotations_dir: "data/annotations"
+  vocab_path: "data/vocab.json"
+  stats_path: "data/dataset_stats.json"
+  saved_models_dir: "saved_models"
+  logs_dir: "logs"
+
+dataset:
+  freq_threshold: 1
+  max_caption_len: 30
+  val_ratio: 0.1
+  image_size: 224
+
+model:
+  embed_size: 512
+  num_decoder_layers: 6
+  nhead: 8
+  dim_feedforward: 2048
+  dropout: 0.1
+  train_cnn: false
+
+training:
+  num_epochs: 1
+  batch_size: 128
+  num_workers: 0
+  grad_clip: 1.0
+  label_smoothing: 0.1
+  lr_decoder: 3.0e-4
+  lr_encoder_fc: 3.0e-4
+  lr_encoder_cnn_last: 1.0e-4
+  scheduler_patience: 2
+  scheduler_factor: 0.5
+
+inference:
+  max_len: 30
+  model_path: "saved_models/image_caption_model_final.pth"
+
+api:
+  host: "127.0.0.1"
+  port: 8000
