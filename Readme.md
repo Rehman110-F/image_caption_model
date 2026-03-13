@@ -1,103 +1,148 @@
-#  Image Captioning — CNN + Transformer
+# Image Captioning - CNN + Transformer
 
 > ResNet-50 encoder + Transformer decoder trained on MS COCO dataset.
 > Converted from a Jupyter notebook into a clean, production-ready project structure.
 
 ---
 
-##  Project Structure
+## Project Structure
 
 ```
 image_captioning/
-│
-├── configs/
-│   ├── config.yaml             ← all paths and hyperparameters
-│   └── config_loader.py        ← YAML loader
-│
-├── src/
-│   ├── data/
-│   │   ├── prepare.py          ← load COCO pairs, compute mean/std, build vocab
-│   │   └── dataset.py          ← CaptionDataset, collate_function, build_loaders
-│   ├── models/
-│   │   ├── encoder.py          ← CNNEncoder (ResNet-50)
-│   │   ├── decoder.py          ← PositionalEncoding + TransformerDecoder
-│   │   └── captioning_model.py ← ImageCaptioningModel (encoder + decoder)
-│   ├── training/
-│   │   └── train_utils.py      ← generate_square_subsequent_mask, train_one_epoch, validate
-│   ├── inference/
-│   │   └── predictor.py        ← generate_caption + CaptionPredictor wrapper
-│   └── api/
-│       └── app.py              ← FastAPI server (POST /caption)
-│
-├── scripts/
-│   ├── prepare_data.py         ← run once to cache vocab + stats
-│   ├── train.py                ← full training run
-│   ├── predict.py              ← CLI inference
-│   └── run_api.py              ← start the API server
-│
-├── frontend/
-│   └── index.html              ← drag-and-drop web UI
-│
-├── data/                       ← put your COCO images + annotations here
-├── saved_models/               ← checkpoints saved here
-└── requirements.txt
+|
+|-- configs/
+|   |-- config.yaml               <- all paths and hyperparameters
+|   |-- config_loader.py          <- YAML loader
+|
+|-- src/
+|   |-- data/
+|   |   |-- prepare.py            <- load COCO pairs, compute mean/std, build vocab
+|   |   |-- dataset.py            <- CaptionDataset, collate_function, build_loaders
+|   |-- models/
+|   |   |-- encoder.py            <- CNNEncoder (ResNet-50)
+|   |   |-- decoder.py            <- PositionalEncoding + TransformerDecoder
+|   |   |-- captioning_model.py   <- ImageCaptioningModel (encoder + decoder)
+|   |-- training/
+|   |   |-- train_utils.py        <- generate_square_subsequent_mask, train_one_epoch, validate
+|   |-- inference/
+|   |   |-- predictor.py          <- generate_caption + CaptionPredictor wrapper
+|   |-- api/
+|       |-- app.py                <- FastAPI server (POST /caption)
+|
+|-- scripts/
+|   |-- prepare_data.py           <- run once to cache vocab + stats
+|   |-- train.py                  <- full training run
+|   |-- predict.py                <- CLI inference
+|   |-- run_api.py                <- start the API server
+|
+|-- frontend/
+|   |-- index.html                <- drag-and-drop web UI
+|
+|-- Dockerfile                    <- Docker build file (CPU version)
+|-- docker-compose.yml            <- Docker Compose config
+|-- .dockerignore                 <- files excluded from Docker image
+|-- requirements.txt              <- GPU dependencies
+|-- requirements-cpu.txt          <- CPU dependencies (for Docker / no GPU)
+|-- data/                         <- put your COCO images + annotations here
+|-- saved_models/                 <- checkpoints saved here
+|-- README.md
 ```
 
 ---
 
-##  Setup
+## Which requirements file should I use?
+
+| Situation | File to use |
+|-----------|-------------|
+| You have an NVIDIA GPU (CUDA) | `requirements.txt` |
+| You have no GPU (CPU only) | `requirements-cpu.txt` |
+| Building Docker image | uses `requirements-cpu.txt` automatically |
+
+---
+
+## Setup - GPU (NVIDIA CUDA)
 
 ```bash
 pip install -r requirements.txt
 ```
 
+`requirements.txt` contains:
+```
+torch==2.6.0
+torchvision==0.21.0
+Pillow==12.0.0
+numpy==2.2.6
+tqdm==4.67.3
+PyYAML==6.0.3
+fastapi==0.135.1
+uvicorn==0.41.0
+python-multipart==0.0.22
+pydantic==2.12.5
+matplotlib==3.10.8
+starlette==0.52.1
+anyio==4.12.1
+```
+
+Make sure you have the correct CUDA version of PyTorch installed.
+Check your version at: https://pytorch.org/get-started/locally/
+
+```bash
+# This project uses CUDA 12.4
+pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
+```
+
 ---
 
-##  GPU Requirement
+## Setup - CPU only (No GPU)
 
-> ⚠️ **This project was trained and tested on a CUDA-enabled GPU.**
+```bash
+pip install -r requirements-cpu.txt
+```
 
-- If you have an **NVIDIA GPU**, make sure you have the correct CUDA version of PyTorch installed.
-  Check your version at 👉 https://pytorch.org/get-started/locally/
+`requirements-cpu.txt` contains:
+```
+torch==2.1.0
+torchvision==0.16.0
+Pillow==12.0.0
+numpy==1.26.0
+tqdm==4.67.3
+PyYAML==6.0.3
+fastapi==0.135.1
+uvicorn==0.41.0
+python-multipart==0.0.22
+pydantic==2.12.5
+matplotlib==3.10.8
+starlette==0.52.1
+anyio==4.12.1
+```
 
-  ```bash
-  # Example for CUDA 12.4
-  pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
-  ```
-
-- If you **do NOT have a GPU** and want to run on CPU only, install the CPU-only version of PyTorch:
-
-  ```bash
-  pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-  ```
-
-  > 💡 **Tip:** Training on CPU will be **very slow**. GPU is strongly recommended for training.
-  > For inference (predicting captions on single images) CPU is fine, just slower.
+> NOTE: Training on CPU will be very slow. GPU is strongly recommended for training.
+> For inference (predicting captions on single images) CPU is fine, just slower (5-15 sec per image).
 
 ---
 
-##  Data Layout
+## Data Layout
 
 ```
 data/
-├── images/
-│   └── val2017/               ← *.jpg images from COCO val2017
-└── annotations/
-    └── captions_val2017.json
+|-- images/
+|   |-- val2017/               <- *.jpg images from COCO val2017
+|-- annotations/
+    |-- captions_val2017.json
 ```
 
 | File | Download Link |
 |------|---------------|
-| 📷 Images (val2017) | http://images.cocodataset.org/zips/val2017.zip |
-| 📝 Captions | http://images.cocodataset.org/annotations/annotations_trainval2017.zip |
+| Images (val2017) | http://images.cocodataset.org/zips/val2017.zip |
+| Captions | http://images.cocodataset.org/annotations/annotations_trainval2017.zip |
 
 After downloading, update the paths in `configs/config.yaml` to point to your local data.
 
 ---
 
-##  Usage
+## Usage - Without Docker
 
-### 1 — Prepare Data *(run once)*
+### Step 1 - Prepare Data (run once)
 
 ```bash
 python scripts/prepare_data.py
@@ -107,7 +152,9 @@ Saves `data/vocab.json` and `data/dataset_stats.json`.
 
 ---
 
-### 2 — Train
+### Step 2 - Train
+
+> NOTE: Requires GPU. Make sure you installed `requirements.txt` (GPU version).
 
 ```bash
 python scripts/train.py
@@ -121,7 +168,7 @@ python scripts/train.py --resume saved_models/checkpoint_epoch_005.pth
 
 ---
 
-### 3 — Predict (CLI)
+### Step 3 - Predict (CLI)
 
 ```bash
 # Provide the full path to your image inside quotes
@@ -130,7 +177,7 @@ python scripts/predict.py --image "C:/Users/YourName/Pictures/your_image.jpg"
 
 ---
 
-### 4 — API + Frontend
+### Step 4 - API + Frontend
 
 Start the API server:
 
@@ -138,17 +185,101 @@ Start the API server:
 python scripts/run_api.py
 ```
 
-Then open `frontend/index.html` by **double-clicking** it in your file explorer.
+Then open `frontend/index.html` by double-clicking it in your file explorer.
 
-![Caption generated by trained model](./image.png)
+> Make sure the API URL box in the frontend shows http://127.0.0.1:8000 before uploading an image.
 
-> 💡 Make sure the API URL box in the frontend shows `http://127.0.0.1:8000` before uploading an image.
-
-Swagger API docs → [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+Swagger API docs: http://127.0.0.1:8000/docs
 
 ---
 
-## 🌐 API
+## Usage - With Docker
+
+> Docker uses `requirements-cpu.txt` automatically. No GPU needed on the Docker machine.
+
+### How Docker works for this project
+
+```
+Your Machine
+|-- saved_models/    <- your trained model  (mounted into container)
+|-- data/            <- vocab + stats files (mounted into container)
+|-- Docker Container
+        |-- Python 3.10
+        |-- PyTorch 2.1.0 (CPU)
+        |-- All packages from requirements-cpu.txt
+        |-- runs: python scripts/run_api.py
+                        |
+                        v
+               API at http://localhost:8000
+```
+
+---
+
+### Step 1 - Install Docker
+
+Download Docker Desktop from: https://www.docker.com/products/docker-desktop/
+
+Verify it works:
+```bash
+docker --version
+docker ps
+```
+
+---
+
+### Step 2 - Place required files
+
+Before building, make sure these files exist in your project folder:
+```
+saved_models/image_caption_model_final.pth   <- trained model
+data/vocab.json                               <- built by prepare_data.py
+data/dataset_stats.json                       <- built by prepare_data.py
+```
+
+---
+
+### Step 3 - Build Docker image
+
+```bash
+docker build -t image-captioning .
+```
+
+This takes 10-15 minutes the first time (downloads Python and installs packages).
+
+---
+
+### Step 4 - Run with Docker Compose
+
+```bash
+docker-compose up
+```
+
+To stop:
+```bash
+docker-compose down
+```
+
+---
+
+### Step 5 - Open the frontend
+
+Double-click `frontend/index.html` in your file explorer.
+Make sure the API URL shows `http://127.0.0.1:8000` then upload an image.
+
+---
+
+### Docker files explained
+
+| File | Purpose |
+|------|---------|
+| `Dockerfile` | builds the image using python:3.10-slim and requirements-cpu.txt |
+| `docker-compose.yml` | mounts data/ and saved_models/ and runs the container |
+| `.dockerignore` | excludes large files from being copied into the image |
+| `requirements-cpu.txt` | CPU-only packages used inside Docker |
+
+---
+
+## API
 
 ```bash
 curl -X POST http://127.0.0.1:8000/caption \
@@ -165,20 +296,21 @@ Response:
 
 ---
 
-## 💡 Tips
+## Tips
 
-- Always run all scripts from the **project root directory**, not from inside the `scripts/` folder.
-- The `pretrained` deprecation warning from torchvision is **harmless** — the model loads correctly.
-- `vocab.json` and `dataset_stats.json` are cached after the first `prepare_data.py` run — no need to rerun unless you change the dataset.
-- A checkpoint is saved after **every epoch** inside `saved_models/` so you can resume training anytime.
-- For CPU-only inference, the model automatically falls back to CPU — no code changes needed.
+- Always run all scripts from the project root directory, not from inside the scripts/ folder.
+- The pretrained deprecation warning from torchvision is harmless - the model loads correctly.
+- vocab.json and dataset_stats.json are cached after first prepare_data.py run - no need to rerun.
+- A checkpoint is saved after every epoch inside saved_models/ so you can resume training anytime.
+- For CPU-only inference the model automatically falls back to CPU - no code changes needed.
+- Docker uses the CPU version of PyTorch - do not use Docker for training, only for inference and API.
 
 ---
 
-## 👤 Author
+## Author
 
 **Muhammad Rehman Ashraf**
 
 ---
 
-*Built with PyTorch · torchvision · FastAPI · MS COCO*
+*Built with PyTorch - torchvision - FastAPI - MS COCO*
