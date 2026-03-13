@@ -60,6 +60,43 @@ image_captioning/
 
 ---
 
+## Setup - Create Environment First
+
+Before installing any packages, create an isolated environment.
+This keeps your project dependencies separate from other projects.
+
+### Option A - Conda (Recommended)
+
+```bash
+# Create a new conda environment with Python 3.10
+conda create -n imgcap python=3.10
+
+# Activate it
+conda activate imgcap
+
+# You will see (imgcap) in your terminal now
+```
+
+### Option B - Virtual Environment (venv)
+
+```bash
+# Create virtual environment
+python -m venv imgcap
+
+# Activate it on Windows
+imgcap\Scripts\activate
+
+# Activate it on Mac/Linux
+source imgcap/bin/activate
+
+# You will see (imgcap) in your terminal now
+```
+
+> NOTE: Always make sure your environment is activated before running any commands in this project.
+> You will see `(imgcap)` at the start of your terminal line when it is active.
+
+---
+
 ## Setup - GPU (NVIDIA CUDA)
 
 ```bash
